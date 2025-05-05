@@ -3,6 +3,7 @@ import * as fs from "fs";
 import {
   getActiveGitBranchName,
   getBranchTimeLogPath,
+  handleShowDashboardCommand,
   initializeStatusBar,
   updateBranchTimeLog,
   updateStatusBarText,
@@ -43,6 +44,8 @@ export function activate(context: vscode.ExtensionContext) {
   if (!fs.existsSync(timeLogPath)) {
     fs.writeFileSync(timeLogPath, JSON.stringify({}, null, 2), "utf8");
   }
+
+  handleShowDashboardCommand(context);
 
   const statusBarItem = initializeStatusBar(context);
 

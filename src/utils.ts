@@ -113,3 +113,91 @@ export function updateStatusBarText(
 
   statusBarItem.text = `${branchName} - ${hours}h${minutes}m`;
 }
+
+export const handleShowDashboardCommand = (
+  context: vscode.ExtensionContext
+) => {
+  context.subscriptions.push(
+    vscode.commands.registerCommand("branch-timer.showDashboard", () => {
+      const panel = vscode.window.createWebviewPanel(
+        "branch-timer-dashboard",
+        "Branch Timer Dashboard",
+        vscode.ViewColumn.One,
+        { enableScripts: true }
+      );
+
+      const branchTimeLogPath = getBranchTimeLogPath();
+
+      if (!branchTimeLogPath) {
+        vscode.window.showErrorMessage("Could not read branch tracking data.");
+        return;
+      }
+
+      try {
+        const raw = fs.readFileSync(branchTimeLogPath, "utf8");
+        const data = JSON.parse(raw);
+        panel.webview.html = getDashboardHtml(data);
+      } catch (err) {
+        vscode.window.showErrorMessage("Could not read branch tracking data.");
+      }
+    })
+  );
+};
+
+export const getDashboardHtml = (data: Record<string, number>): string => {
+  const rows = Object.entries(data).map(([branch, totalMs]) => {
+    const lastActive = "—"; // Not tracked in your current format
+
+    const hours = Math.floor(totalMs / 3600);
+    const minutes = Math.floor((totalMs % 3600) / 60);
+
+    return `
+        <tr>
+          <td>${branch}</td>
+          <td>${hours}h ${minutes}m</td>
+          <td>${lastActive}</td>
+        </tr>
+      `;
+  });
+
+  return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <style>
+          body { font-family: sans-serif; padding: 20px; }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          th, td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #ddd;
+          }
+          th {
+            text-align: left;
+            background: #f3f3f3;
+          }
+          tr:hover {
+            background-color: #f5f5f5;
+          }
+        </style>
+      </head>
+      <body>
+        <h2>Branch Time Dashboard</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Branch</th>
+              <th>Total Time</th>
+              <th>Last Activity</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.join("")}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+};

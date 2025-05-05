@@ -16,6 +16,10 @@
       {
         "command": "branch-timer.openLog",
         "title": "Open Branch Time Log"
+      },
+      {
+        "command": "branch-timer.showDashboard",
+        "title": "Show Branch Time Dashboard"
       }
     ]
   },
