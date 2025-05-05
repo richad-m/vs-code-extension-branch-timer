@@ -65,7 +65,7 @@ Great for:
 
 This is an open work-in-progress. Feedback and ideas welcome!
 
-- Issues / suggestions → [GitHub repo](https://github.com/yourname/branch-time-tracker)
+- Issues / suggestions → [GitHub repo](https://github.com/richad-m/vs-code-extension-branch-timer)
 - Pull requests welcome!
 
 ---

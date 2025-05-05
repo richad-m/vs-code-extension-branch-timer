@@ -2,6 +2,7 @@
   "name": "branch-timer",
   "displayName": "branch-timer",
   "description": "Track time spent on each branch",
+  "icon": "media/icon.png",
   "version": "1.0.0",
   "engines": {
     "vscode": "^1.96.0"
