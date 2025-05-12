@@ -30,11 +30,9 @@ export function activate(context: vscode.ExtensionContext) {
     return;
   }
 
-  const branchName = getActiveGitBranchName(gitApi);
-
   const timeLogPath = getBranchTimeLogPath();
 
-  if (!timeLogPath || !branchName) {
+  if (!timeLogPath) {
     vscode.window.showWarningMessage(
       "Branch time log path not found. Branch tracking won't work."
     );
@@ -51,12 +49,26 @@ export function activate(context: vscode.ExtensionContext) {
 
   // update status bar text every minute
   setInterval(() => {
-    updateStatusBarText(statusBarItem, branchName);
+    const currentBranchName = getActiveGitBranchName(gitApi);
+
+    if (!currentBranchName) {
+      return;
+    }
+
+    updateStatusBarText(statusBarItem, currentBranchName);
   }, 60 * 1000);
 
-  vscode.workspace.onDidChangeTextDocument(() => {
-    onTextDocumentChange(branchName);
-  });
+  vscode.workspace.onDidChangeTextDocument(
+    (event: vscode.TextDocumentChangeEvent) => {
+      const currentBranchName = getActiveGitBranchName(gitApi);
+
+      if (!currentBranchName) {
+        return;
+      }
+
+      onTextDocumentChange(currentBranchName);
+    }
+  );
 
   gitApi.onDidChangeRepository((repo: any) => {
     onBranchChange(repo);
