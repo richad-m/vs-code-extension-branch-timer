@@ -8,6 +8,7 @@ import {
   updateBranchTimeLog,
   updateStatusBarText,
 } from "./utils";
+import { GitApi } from "./types";
 
 let lastEditTime = Date.now();
 // Cap active interval to 30s
@@ -21,7 +22,7 @@ const IDLE_THRESHOLD_MS = 2 * 60 * 1000; // After 2 mins of no activity, elapsed
 
 export function activate(context: vscode.ExtensionContext) {
   const gitExt = vscode.extensions.getExtension("vscode.git")?.exports;
-  const gitApi = gitExt?.getAPI(1);
+  const gitApi = gitExt?.getAPI(1) as GitApi;
 
   if (!gitApi) {
     vscode.window.showWarningMessage(

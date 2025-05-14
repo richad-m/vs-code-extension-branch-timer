@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
+import { GitApi } from "./types";
 
 export const getBranchTimeLogPath = (): string | null => {
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -91,7 +92,7 @@ export const initializeStatusBar = (
   return statusBarItem;
 };
 
-export const getActiveGitBranchName = (git: any): string | undefined => {
+export const getActiveGitBranchName = (git: GitApi): string | undefined => {
   const repo = git.repositories[0]; // TODO: Handle multiple repos
   return repo?.state?.HEAD?.name;
 };
