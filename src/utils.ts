@@ -93,7 +93,7 @@ export const initializeStatusBar = (
 
 export const getActiveGitBranchName = (git: any): string | undefined => {
   const repo = git.repositories[0]; // TODO: Handle multiple repos
-  return repo?.state.HEAD?.name;
+  return repo?.state?.HEAD?.name;
 };
 
 export function updateStatusBarText(
@@ -102,10 +102,10 @@ export function updateStatusBarText(
 ) {
   const completeTimeLog = loadBranchTimeLog();
 
-  const branchTimeLog = completeTimeLog?.[branchName];
+  const branchTimeLog = completeTimeLog?.[branchName] || 0;
 
   if (!branchTimeLog) {
-    return;
+    updateBranchTimeLog(branchName, 0);
   }
 
   const hours = Math.floor(branchTimeLog / 3600);

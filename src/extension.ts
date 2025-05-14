@@ -29,6 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
     );
     return;
   }
+  let currentActiveBranch = getActiveGitBranchName(gitApi);
 
   const timeLogPath = getBranchTimeLogPath();
 
@@ -43,9 +44,39 @@ export function activate(context: vscode.ExtensionContext) {
     fs.writeFileSync(timeLogPath, JSON.stringify({}, null, 2), "utf8");
   }
 
+  vscode.window.showInformationMessage("Branch timer is now running");
   handleShowDashboardCommand(context);
 
   const statusBarItem = initializeStatusBar(context);
+
+  // Listen to text document changes
+  vscode.workspace.onDidChangeTextDocument(() => {
+    if (!currentActiveBranch) {
+      vscode.window.showInformationMessage("No active branch");
+      return;
+    }
+    onTextDocumentChange(currentActiveBranch);
+  });
+
+  const state = gitApi?.repositories[0]?.state;
+
+  if (!state) {
+    vscode.window.showWarningMessage("No state found");
+    return;
+  }
+
+  // Listen to branch changes
+  state.onDidChange(() => {
+    const newBranchName = getActiveGitBranchName(gitApi);
+
+    if (!newBranchName || newBranchName === currentActiveBranch) {
+      return;
+    }
+
+    currentActiveBranch = newBranchName;
+    onBranchChange();
+    updateStatusBarText(statusBarItem, newBranchName);
+  });
 
   // update status bar text every minute
   setInterval(() => {
@@ -57,30 +88,13 @@ export function activate(context: vscode.ExtensionContext) {
 
     updateStatusBarText(statusBarItem, currentBranchName);
   }, 60 * 1000);
-
-  vscode.workspace.onDidChangeTextDocument(
-    (event: vscode.TextDocumentChangeEvent) => {
-      const currentBranchName = getActiveGitBranchName(gitApi);
-
-      if (!currentBranchName) {
-        return;
-      }
-
-      onTextDocumentChange(currentBranchName);
-    }
-  );
-
-  gitApi.onDidChangeRepository((repo: any) => {
-    onBranchChange(repo);
-    updateStatusBarText(statusBarItem, repo.state.activeBranch?.name);
-  });
 }
 
 const onTextDocumentChange = (branchName: string) => {
   const now = Date.now();
   const elapsedTimeSinceLastEdit = now - lastEditTime;
 
-  if (elapsedTimeSinceLastEdit > IDLE_THRESHOLD_MS) {
+  if (elapsedTimeSinceLastEdit > IDLE_THRESHOLD_MS && lastEditTime !== 0) {
     return;
   }
 
@@ -95,20 +109,6 @@ export function deactivate() {
   vscode.window.showWarningMessage("Deactivating extension");
 }
 
-const onBranchChange = (gitApi: any) => {
-  const branchName = getActiveGitBranchName(gitApi);
-  if (!branchName) {
-    return;
-  }
-  gitApi.onDidChangeRepository((repo: any) => {
-    const newBranchName = repo.state.activeBranch?.name;
-
-    if (!newBranchName) {
-      return;
-    }
-
-    if (newBranchName !== branchName) {
-      lastEditTime = 0; // Reset lastEditTime when the branch changes
-    }
-  });
+const onBranchChange = () => {
+  lastEditTime = 0; // Reset lastEditTime when the branch changes
 };
