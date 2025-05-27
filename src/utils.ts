@@ -17,7 +17,14 @@ export const getBranchTimeLogPath = (): string | null => {
   return path.join(vscodeDir, "branch-time.json");
 };
 
-export const loadBranchTimeLog = (): Record<string, number> | null => {
+export const loadBranchTimeLog = (): Record<
+  string,
+  {
+    focus: number;
+    writing: number;
+    lastActivity: string;
+  }
+> | null => {
   const timeLogPath = getBranchTimeLogPath();
 
   try {
@@ -34,19 +41,43 @@ export const loadBranchTimeLog = (): Record<string, number> | null => {
 
 export const updateBranchTimeLog = (
   branchName: string,
-  secondsSpendWorking: number
-) => {
+  secondsSpendWorking: number,
+  mode: "focus" | "writing"
+): void => {
   const timeLog = loadBranchTimeLog();
 
   if (!timeLog) {
     return;
   }
 
-  timeLog[branchName] = (timeLog[branchName] || 0) + secondsSpendWorking;
+  const currentDate = new Date().toISOString();
+  const branchData = timeLog[branchName] || {
+    focus: 0,
+    writing: 0,
+    lastActivity: currentDate,
+  };
+
+  if (mode === "writing") {
+    branchData.writing += secondsSpendWorking;
+  } else {
+    branchData.focus += secondsSpendWorking;
+  }
+
+  branchData.lastActivity = currentDate;
+  timeLog[branchName] = branchData;
   saveBranchTimeLog(timeLog);
 };
 
-export const saveBranchTimeLog = (timeLog: Record<string, number>) => {
+export const saveBranchTimeLog = (
+  timeLog: Record<
+    string,
+    {
+      focus: number;
+      writing: number;
+      lastActivity: string;
+    }
+  >
+) => {
   const timeLogPath = getBranchTimeLogPath();
 
   try {
@@ -103,14 +134,19 @@ export function updateStatusBarText(
 ) {
   const completeTimeLog = loadBranchTimeLog();
 
-  const branchTimeLog = completeTimeLog?.[branchName] || 0;
+  const branchData = completeTimeLog?.[branchName] || {
+    focus: 0,
+    writing: 0,
+    lastActivity: new Date().toISOString(),
+  };
+  const totalTime = branchData.focus + branchData.writing;
 
-  if (!branchTimeLog) {
-    updateBranchTimeLog(branchName, 0);
+  if (!totalTime) {
+    return;
   }
 
-  const hours = Math.floor(branchTimeLog / 3600);
-  const minutes = Math.floor((branchTimeLog % 3600) / 60);
+  const hours = Math.floor(totalTime / 3600);
+  const minutes = Math.floor((totalTime % 3600) / 60);
 
   statusBarItem.text = `${branchName} - ${hours}h${minutes}m`;
 }
@@ -145,21 +181,34 @@ export const handleShowDashboardCommand = (
   );
 };
 
-export const getDashboardHtml = (data: Record<string, number>): string => {
-  const rows = Object.entries(data).map(([branch, totalMs]) => {
-    const lastActive = "—"; // Not tracked in your current format
+export const getDashboardHtml = (
+  data: Record<
+    string,
+    {
+      focus: number;
+      writing: number;
+      lastActivity: string;
+    }
+  >
+): string => {
+  const rows = Object.entries(data).map(
+    ([branch, { focus, writing, lastActivity }]) => {
+      const readingHours = Math.floor(focus / 3600);
+      const readingMinutes = Math.floor((focus % 3600) / 60);
+      const editingHours = Math.floor(writing / 3600);
+      const editingMinutes = Math.floor((writing % 3600) / 60);
+      const formattedDate = new Date(lastActivity).toLocaleString();
 
-    const hours = Math.floor(totalMs / 3600);
-    const minutes = Math.floor((totalMs % 3600) / 60);
-
-    return `
+      return `
         <tr>
           <td>${branch}</td>
-          <td>${hours}h ${minutes}m</td>
-          <td>${lastActive}</td>
+          <td>${readingHours}h ${readingMinutes}m</td>
+          <td>${editingHours}h ${editingMinutes}m</td>
+          <td>${formattedDate}</td>
         </tr>
       `;
-  });
+    }
+  );
 
   return `
       <!DOCTYPE html>
@@ -190,7 +239,8 @@ export const getDashboardHtml = (data: Record<string, number>): string => {
           <thead>
             <tr>
               <th>Branch</th>
-              <th>Total Time</th>
+              <th>Reading Time</th>
+              <th>Editing Time</th>
               <th>Last Activity</th>
             </tr>
           </thead>

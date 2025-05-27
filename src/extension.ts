@@ -10,14 +10,14 @@ import {
 } from "./utils";
 import { GitApi } from "./types";
 
-let lastEditTime = Date.now();
-// Cap active interval to 30s
-// Because small breaks are normal. But you shouldn't get 5 minutes of "coding" credit for one line of code written after a break.
-// Example : you typed, then 50 seconds later typed again → it only logs 30s max
-const MAX_ACTIVE_INTERVAL = 30 * 1000; // Max 30s between edits
+let lastWritingTime = Date.now();
+let lastFocusTime = Date.now();
+let isVSCodeFocused = true;
 
-// Threshold for when the user is idle to prevent count time when
-// Going to lunch, Leaving tab open, etc.
+// Cap active interval to 30s
+const MAX_ACTIVE_INTERVAL = 30 * 1000; // Max 30s between activities
+
+// Threshold for when the user is idle
 const IDLE_THRESHOLD_MS = 2 * 60 * 1000; // After 2 mins of no activity, elapsed time is ignored
 
 export function activate(context: vscode.ExtensionContext) {
@@ -50,13 +50,31 @@ export function activate(context: vscode.ExtensionContext) {
 
   const statusBarItem = initializeStatusBar(context);
 
-  // Listen to text document changes
-  vscode.workspace.onDidChangeTextDocument(() => {
+  vscode.window.onDidChangeWindowState((e) => {
     if (!currentActiveBranch) {
-      vscode.window.showInformationMessage("No active branch");
       return;
     }
-    onTextDocumentChange(currentActiveBranch);
+
+    isVSCodeFocused = e.focused;
+
+    if (e.focused) {
+      onFocus();
+    } else {
+      onBlur(currentActiveBranch);
+    }
+  });
+
+  vscode.workspace.onDidChangeTextDocument((event) => {
+    if (!currentActiveBranch) {
+      return;
+    }
+
+    // Skip if the changed document is our time log file
+    if (event.document.uri.fsPath === timeLogPath) {
+      return;
+    }
+
+    onEditingActivity(currentActiveBranch);
   });
 
   const state = gitApi?.repositories[0]?.state;
@@ -91,25 +109,41 @@ export function activate(context: vscode.ExtensionContext) {
   }, 60 * 1000);
 }
 
-const onTextDocumentChange = (branchName: string) => {
+const onEditingActivity = (branchName: string) => {
   const now = Date.now();
-  const elapsedTimeSinceLastEdit = now - lastEditTime;
+  const elapsedTimeSinceLastActivity = now - lastWritingTime;
 
-  if (elapsedTimeSinceLastEdit > IDLE_THRESHOLD_MS && lastEditTime !== 0) {
+  if (
+    elapsedTimeSinceLastActivity > IDLE_THRESHOLD_MS &&
+    lastWritingTime !== 0
+  ) {
     return;
   }
 
-  const timeToAdd = Math.min(elapsedTimeSinceLastEdit, MAX_ACTIVE_INTERVAL);
+  const timeToAdd = Math.min(elapsedTimeSinceLastActivity, MAX_ACTIVE_INTERVAL);
+  updateBranchTimeLog(branchName, Math.floor(timeToAdd / 1000), "writing");
+  lastWritingTime = now;
+};
 
-  updateBranchTimeLog(branchName, Math.floor(timeToAdd / 1000));
+const onFocus = () => {
+  lastFocusTime = Date.now();
+};
 
-  lastEditTime = now;
+const onBlur = (branchName: string) => {
+  const now = Date.now();
+  const timeSpentFocus = now - lastFocusTime;
+
+  updateBranchTimeLog(branchName, Math.floor(timeSpentFocus / 1000), "focus");
+  lastFocusTime = now;
 };
 
 export function deactivate() {
+  lastWritingTime = 0;
+  lastFocusTime = 0;
   vscode.window.showWarningMessage("Deactivating extension");
 }
 
 const onBranchChange = () => {
-  lastEditTime = 0; // Reset lastEditTime when the branch changes
+  lastWritingTime = 0;
+  lastFocusTime = 0;
 };
