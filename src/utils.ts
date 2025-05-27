@@ -145,10 +145,12 @@ export function updateStatusBarText(
     return;
   }
 
-  const hours = Math.floor(totalTime / 3600);
-  const minutes = Math.floor((totalTime % 3600) / 60);
+  const hoursFocus = Math.floor(branchData.focus / 3600);
+  const minutesFocus = Math.floor((branchData.focus % 3600) / 60);
+  const hoursWriting = Math.floor(branchData.writing / 3600);
+  const minutesWriting = Math.floor((branchData.writing % 3600) / 60);
 
-  statusBarItem.text = `${branchName} - ${hours}h${minutes}m`;
+  statusBarItem.text = `${branchName} - FOCUSED: ${hoursFocus}h${minutesFocus}m WRITING: ${hoursWriting}h${minutesWriting}m`;
 }
 
 export const handleShowDashboardCommand = (
@@ -219,6 +221,7 @@ export const getDashboardHtml = (
           table {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 20px;
           }
           th, td {
             padding: 8px 12px;
@@ -231,10 +234,48 @@ export const getDashboardHtml = (
           tr:hover {
             background-color: #f5f5f5;
           }
+          .explanation {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+          }
+          .explanation h3 {
+            margin-top: 0;
+            color: #333;
+          }
+          .explanation ul {
+            margin: 10px 0;
+            padding-left: 20px;
+          }
+          .explanation li {
+            margin: 5px 0;
+          }
         </style>
       </head>
       <body>
         <h2>Branch Time Dashboard</h2>
+        
+        <div class="explanation">
+          <h3>How Time is Tracked</h3>
+          <ul>
+            <li><strong>Focus Time:</strong> Tracks the total time VS Code is focused (active window). This includes:
+              <ul>
+                <li>Time starts when VS Code gains focus</li>
+                <li>Time stops when VS Code loses focus</li>
+                <li>All focus time is logged without any caps or thresholds</li>
+              </ul>
+            </li>
+            <li><strong>Writing Time:</strong> Tracks time spent actively editing code. This includes:
+              <ul>
+                <li>Time between text changes is capped at 30 seconds</li>
+                <li>If no changes for 2 minutes, time is considered idle</li>
+                <li>Only counts actual editing activity</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+
         <table>
           <thead>
             <tr>
