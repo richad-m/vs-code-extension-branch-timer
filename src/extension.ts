@@ -3,12 +3,12 @@ import * as fs from "fs";
 import {
   getActiveGitBranchName,
   getBranchTimeLogPath,
-  handleShowDashboardCommand,
   initializeStatusBar,
   updateBranchTimeLog,
   updateStatusBarText,
 } from "./utils";
 import { GitApi } from "./types";
+import { handleShowDashboardCommand } from "./dashboard";
 
 let lastWritingTime = Date.now();
 let lastFocusTime = Date.now();
