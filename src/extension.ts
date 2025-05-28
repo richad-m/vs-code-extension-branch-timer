@@ -138,12 +138,12 @@ const onBlur = (branchName: string) => {
 };
 
 export function deactivate() {
-  lastWritingTime = 0;
-  lastFocusTime = 0;
+  lastWritingTime = Date.now();
+  lastFocusTime = Date.now();
   vscode.window.showWarningMessage("Deactivating extension");
 }
 
 const onBranchChange = () => {
-  lastWritingTime = 0;
-  lastFocusTime = 0;
+  lastWritingTime = Date.now();
+  lastFocusTime = Date.now();
 };
